@@ -21,18 +21,18 @@ mpi = MpiPartition()
 ############################################################################
 #### Input Parameters
 ############################################################################
-MAXITER = 30
-max_modes = [1, 2, 3]
-mean_shear_target = -2.0
+MAXITER = 80
+max_modes = [1]
+mean_shear_target = -1.2
 shear_weight = 1e2
-elongation_weight = 1e0
+elongation_weight = 3e0
 QA_or_QH_or_warm = 'warm' # define initial input VMEC file
-rel_step = 1e-2
-abs_step = 1e-5
+rel_step = 5e-2
+abs_step = 1e-4
 minimum_iota = 0.35
 min_iota_weight = 1e4
 aspect_ratio_target = 5 if QA_or_QH_or_warm=='QA' else 5
-aspect_ratio_weight = 1e-1
+aspect_ratio_weight = 3e-1
 opt_quasisymmetry = False
 boozxform_nsurfaces=10
 ftol=1e-3
@@ -50,8 +50,9 @@ os.chdir(OUT_DIR)
 ######################################
 def elongationCostFunction(v):
     v.run()
-    nphi = 7
-    elongation = MaxElongationPen(v,ntheta=19,nphi=nphi, return_elongation=True)
+    nphi = 9
+    ntheta = 21
+    elongation = MaxElongationPen(v,ntheta=ntheta,nphi=nphi, return_elongation=True)
     return elongation
 def shearCostFunction(v):
     v.run()
@@ -90,7 +91,9 @@ for max_mode in max_modes:
     ######################################
     prob = LeastSquaresProblem.from_tuples(opt_tuple)
     pprint("Total objective before optimization:", prob.objective())
-    least_squares_mpi_solve(prob, mpi, grad=True, rel_step=rel_step, abs_step=abs_step, max_nfev=MAXITER, ftol=ftol)
+    least_squares_mpi_solve(prob, mpi, grad=True, rel_step=rel_step, abs_step=abs_step, max_nfev=MAXITER/2, ftol=ftol)
+    least_squares_mpi_solve(prob, mpi, grad=True, rel_step=rel_step/10, abs_step=abs_step/10, max_nfev=MAXITER/2, ftol=ftol)
+    vmec.write_input(os.path.join(OUT_DIR, f'input.max_mode{max_mode}'))
     ######################################
     pprint("Final aspect ratio:", vmec.aspect())
     pprint("Final max elongation:", np.max(optElongationCostFunction.J()))
@@ -98,7 +101,9 @@ for max_mode in max_modes:
     pprint("Final iota_axis:", vmec.iota_axis())
     pprint("Final iota_edge:", vmec.iota_edge())
     pprint("Total objective after optimization:", prob.objective())
-    ######################################
+######################################
+time.sleep(2)
+######################################
 try:
     for objective_file in glob.glob("objective_*"):
         os.remove(objective_file)
@@ -116,8 +121,9 @@ except Exception as e:
     pprint(e)
 ######################################
 time.sleep(2)
+######################################
 vmec.write_input(os.path.join(OUT_DIR, f'input.final'))
-vmec_final = Vmec(os.path.join(OUT_DIR, f'input.final'), mpi=mpi, verbose=False)
+vmec_final = Vmec(os.path.join(OUT_DIR, f'input.final'), mpi=mpi, verbose=True)
 vmec_final.indata.ns_array[:3]    = [  16,    51,    101]
 vmec_final.indata.niter_array[:3] = [ 4000, 10000, 10000]
 vmec_final.indata.ftol_array[:3]  = [1e-12, 1e-13, 1e-14]
