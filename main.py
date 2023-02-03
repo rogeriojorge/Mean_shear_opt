@@ -22,8 +22,8 @@ mpi = MpiPartition()
 #### Input Parameters
 ############################################################################
 MAXITER = 30
-max_modes = [2, 3]
-mean_shear_target = -0.6
+max_modes = [1, 2, 3]
+mean_shear_target = -2.0
 shear_weight = 1e2
 elongation_weight = 1e0
 QA_or_QH_or_warm = 'warm' # define initial input VMEC file
@@ -31,8 +31,8 @@ rel_step = 1e-2
 abs_step = 1e-5
 minimum_iota = 0.35
 min_iota_weight = 1e4
-aspect_ratio_target = 3 if QA_or_QH_or_warm=='QA' else 4
-aspect_ratio_weight = 1e-2
+aspect_ratio_target = 5 if QA_or_QH_or_warm=='QA' else 5
+aspect_ratio_weight = 1e-1
 opt_quasisymmetry = False
 boozxform_nsurfaces=10
 ftol=1e-3
@@ -75,7 +75,7 @@ if QA_or_QH_or_warm == 'QH': qs = QuasisymmetryRatioResidual(vmec, np.arange(0, 
 else: qs = QuasisymmetryRatioResidual(vmec, np.arange(0, 1.01, 0.1), helicity_m=1, helicity_n=0)    
 opt_tuple = [(vmec.aspect, aspect_ratio_target, aspect_ratio_weight)]
 opt_tuple = []
-opt_tuple.append((optElongationCostFunction.J, 0, elongation_weight))
+opt_tuple.append((optElongationCostFunction.J, 1, elongation_weight))
 opt_tuple.append((optShearCostFunction.J, mean_shear_target, shear_weight))
 opt_tuple.append((optaIotaCostFunction.J, 0, min_iota_weight))
 if opt_quasisymmetry: opt_tuple.append((qs.residuals, 0, 1))
@@ -107,6 +107,10 @@ try:
     for jac_file in glob.glob("jac_log_*"):
         os.remove(jac_file)
     for threed_file in glob.glob("threed1.*"):
+        os.remove(threed_file)
+    for threed_file in glob.glob("input.*000*"):
+        os.remove(threed_file)
+    for threed_file in glob.glob("wout_*000*"):
         os.remove(threed_file)
 except Exception as e:
     pprint(e)
